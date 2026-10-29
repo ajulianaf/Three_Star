@@ -34,22 +34,29 @@ model Product {
 }
 
 model Order {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  total     Int
-  status    OrderStatus @default(PENDING)
-  paymentId String?
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id])
-  items     OrderItem[]
+  id              Int         @id @default(autoincrement())
+  userId          Int
+  total           Int
+  status          OrderStatus @default(PENDING)
+  paymentId       String?
+  customerName    String?
+  customerEmail   String?
+  shippingAddress String?
+  shippingCity    String?
+  cardBrand       String?
+  cardLast4       String?
+  paidAt          DateTime?
+  createdAt       DateTime    @default(now())
+  user            User        @relation(fields: [userId], references: [id])
+  items           OrderItem[]
 }
 
 model OrderItem {
-  id           Int     @id @default(autoincrement())
-  orderId      Int
-  productId    String
-  quantity     Int
+  id             Int     @id @default(autoincrement())
+  orderId        Int
+  productId      String
+  quantity       Int
   precioUnitario Int
-  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product @relation(fields: [productId], references: [id])
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id])
 }

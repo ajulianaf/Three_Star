@@ -1,14 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
+import Link from "next/link";
+import { motion, useAnimationControls } from "framer-motion";
 
-type Character = { name: string; image: string; button: string; diary: string[] };
+// "href" es a dónde lleva el botón: /soul-bond?tab=animacion, ?tab=personajes o ?tab=comic
+// (la página de Soul Bond lee el ?tab= y abre la pestaña correspondiente)
+type Character = { name: string; image: string; button: string; href: string };
 
 // Imágenes en /public/carrusel_personajes/ (arte completo de cada tarjeta, SIN el botón ni el sapo)
 const CHARACTERS: Character[] = [
-  { name: "Nico", image: "/carrusel_personajes/Imagen Animación.png", button: "Ver Animación", diary: [] },
-  { name: "Evangeline", image: "/carrusel_personajes/Imagen Evangelin.png", button: "Lee mis Secretos", diary: [] },
-  { name: "Leo", image: "/carrusel_personajes/Imagen Nico.png", button: "Mi Diario", diary: [] },
+  { name: "Nico", image: "/carrusel_personajes/Imagen Animación.png", button: "Ver Animación", href: "/soul-bond?tab=animacion" },
+  { name: "Evangeline", image: "/carrusel_personajes/Imagen Evangelin.png", button: "Lee mis Secretos", href: "/soul-bond?tab=personajes" },
+  { name: "Leo", image: "/carrusel_personajes/Imagen Nico.png", button: "Mi Diario", href: "/soul-bond?tab=comic" },
 ];
 
 // ---------- SAPOS ----------
@@ -54,7 +57,6 @@ export default function CharacterCarousel() {
   const [index, setIndex] = useState(0);  // tarjeta activa
   const [frog, setFrog] = useState(0);    // sapo que se ve
   const [frame, setFrame] = useState(0);  // cuadro actual del sapo
-  const [diary, setDiary] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
   const tongue = useAnimationControls();
   const [tp, setTp] = useState(() =>
@@ -69,7 +71,6 @@ export default function CharacterCarousel() {
   const goTo = (target: number, withFrog = true) => {
     indexRef.current = target;
     setIndex(target);
-    setDiary(false);
     if (withFrog) { setFrog(target % FROGS.length); setFrame(0); }
   };
 
@@ -109,12 +110,12 @@ export default function CharacterCarousel() {
     busy.current = false;
   }
 
-  // Automático: sigue pasando solo aunque nadie lo esté mirando (solo se pausa con el diario abierto o con la pestaña oculta)
+  // Automático: sigue pasando solo aunque nadie lo esté mirando (solo se pausa con la pestaña oculta)
   useEffect(() => {
-    if (MODO_AJUSTE || diary || tabHidden) return;
+    if (MODO_AJUSTE || tabHidden) return;
     const t = setTimeout(() => shoot(), AUTO_MS);
     return () => clearTimeout(t);
-  }, [index, diary, tabHidden]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [index, tabHidden]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onVis = () => setTabHidden(document.hidden);
@@ -156,26 +157,15 @@ export default function CharacterCarousel() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={c.image} alt={c.name} className={`h-full w-full object-cover ${active ? "" : "brightness-75"}`} />
 
-            <AnimatePresence>
-              {active && diary && (
-                <motion.div
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex flex-col justify-center gap-3 bg-black/85 p-[6%] text-[clamp(14px,1.6vw,22px)] text-white"
-                >
-                  <h3 className="text-[#FBC616]">Diario de {c.name}</h3>
-                  {c.diary.length === 0 && <p className="opacity-70">Próximamente…</p>}
-                  {c.diary.map((l) => <p key={l}>📖 {l}</p>)}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
+            {/* Botón: lleva a la sección correspondiente de Soul Bond */}
             {active && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setDiary((v) => !v); }}
+              <Link
+                href={c.href}
+                onClick={(e) => e.stopPropagation()}
                 className="absolute bottom-[8%] right-[7%] z-10 rounded-2xl bg-[#FBC616] px-[4%] py-[1.2%] text-[clamp(14px,1.5vw,20px)] text-[#232350] transition hover:brightness-110"
               >
-                {diary ? "Volver" : c.button}
-              </button>
+                {c.button}
+              </Link>
             )}
           </motion.article>
         );

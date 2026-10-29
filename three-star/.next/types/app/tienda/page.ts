@@ -1,4 +1,4 @@
-// File: D:\INFORMACION\Desktop\three-star\three-star\src\app\tienda\page.tsx
+// File: D:\INFORMACION\Documents\GitHub\Three_Star\three-star\src\app\tienda\page.tsx
 import * as entry from '../../../../src/app/tienda/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

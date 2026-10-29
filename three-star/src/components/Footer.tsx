@@ -31,27 +31,24 @@ function TikTok({ size = 32 }: IconProps) {
   );
 }
 
+/* Mismo contenido en todo el sitio; solo cambia el color de fondo en Soul Bond */
 export default function Footer() {
   const path = usePathname();
-
-  if (path.startsWith("/soul-bond")) {
-    return (
-      <footer className="bg-[#2B2B2B] px-4 py-6 text-center text-white">
-        <div className="mb-3 flex items-center justify-center gap-4">
-          <a href="#" aria-label="YouTube" className="hover:text-blood"><YouTube /></a>
-          <a href="#" aria-label="Instagram" className="hover:text-blood"><Instagram /></a>
-          <a href="#" aria-label="TikTok" className="hover:text-blood"><TikTok /></a>
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="Three Star" className="mx-auto h-8 w-auto brightness-0 invert" />
-        <p className="mt-2 text-xs text-white/80">
-          © 2026 Three Star Studio. Todos los derechos reservados.
-        </p>
-      </footer>
-    );
-  }
+  const bg = path.startsWith("/soul-bond") ? "bg-[#2B2B2B]" : "bg-deep";
 
   return (
-    <footer className="bg-deep p-4 text-center text-xs text-white/70">© Three Star</footer>
+    <footer className={`${bg} px-4 py-6 text-center text-white`}>
+      <div className="mb-3 flex items-center justify-center gap-4">
+        {/* Cambia los "#" por los enlaces reales de tus redes */}
+        <a href="#" aria-label="YouTube" className="hover:text-blood"><YouTube /></a>
+        <a href="#" aria-label="Instagram" className="hover:text-blood"><Instagram /></a>
+        <a href="#" aria-label="TikTok" className="hover:text-blood"><TikTok /></a>
+      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="Three Star" className="mx-auto h-8 w-auto brightness-0 invert" />
+      <p className="mt-2 text-xs text-white/80">
+        © 2026 Three Star Studio. Todos los derechos reservados.
+      </p>
+    </footer>
   );
 }

@@ -1,60 +1,81 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { MercadoPagoConfig, Preference } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 
-const mp = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
+/* PASARELA SIMULADA
+   Este endpoint crea el pedido (PENDING) y manda al cliente a /pago/[id].
+   El cobro "real" lo simula /api/pay. */
+
+class HttpError extends Error {
+  constructor(message: string, public status = 400) {
+    super(message);
+  }
+}
 
 export async function POST(req: Request) {
   try {
     const { customer, items } = await req.json();
-    if (!customer?.email || !customer?.name || !Array.isArray(items) || !items.length)
-      return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+
+    // Limpiar y validar los datos del cliente EN EL SERVIDOR
+    const name = String(customer?.name ?? "").trim();
+    const email = String(customer?.email ?? "").trim().toLowerCase();
+    const address = String(customer?.address ?? "").trim();
+    const city = String(customer?.city ?? "").trim();
+    if (!name || !email || !address || !city || !Array.isArray(items) || !items.length)
+      throw new HttpError("Datos incompletos");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError("Correo inválido");
+
+    // Unir productos repetidos (evita saltarse la validación de stock enviando el mismo producto dos veces)
+    const wanted = new Map<string, number>();
+    for (const i of items) {
+      const id = String(i?.productId ?? "");
+      const q = Number(i?.quantity);
+      if (!id || !Number.isInteger(q) || q < 1) throw new HttpError("Producto inválido");
+      wanted.set(id, (wanted.get(id) ?? 0) + q);
+    }
 
     // Los precios SIEMPRE se leen de la BD, nunca del cliente
-    const products = await prisma.product.findMany({ where: { id: { in: items.map((i: any) => i.productId) } } });
-    const lines = items.map((i: any) => {
-      const p = products.find((x) => x.id === i.productId);
-      const q = Number(i.quantity);
-      if (!p || !Number.isInteger(q) || q < 1) throw new Error("Producto inválido");
-      if (p.stock < q) throw new Error(`Sin stock suficiente de ${p.name}`);
+    const products = await prisma.product.findMany({ where: { id: { in: [...wanted.keys()] } } });
+    const lines = [...wanted.entries()].map(([id, q]) => {
+      const p = products.find((x) => x.id === id);
+      if (!p) throw new HttpError("Producto inválido");
+      if (p.stock < q) throw new HttpError(`Sin stock suficiente de ${p.name}`, 409);
       return { p, q };
     });
-    const total = lines.reduce((s: number, l: any) => s + l.p.price * l.q, 0);
+    const total = lines.reduce((s, l) => s + l.p.price * l.q, 0);
 
-    // Buscar o crear usuario (compra como invitado => password aleatoria)
-    const user = await prisma.user.upsert({
-      where: { email: customer.email },
-      update: { name: customer.name, address: customer.address, city: customer.city },
-      create: {
-        name: customer.name, email: customer.email, address: customer.address, city: customer.city,
-        passwordHash: await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10),
-      },
+    // Compra como invitado => contraseña aleatoria
+    const passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10);
+
+    // Usuario + pedido en una sola transacción
+    const order = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.upsert({
+        where: { email },
+        update: { name, address, city },
+        create: { name, email, address, city, passwordHash },
+      });
+      return tx.order.create({
+        data: {
+          userId: user.id,
+          total,
+          status: "PENDING",
+          // Copia de los datos de ESTE pedido
+          customerName: name,
+          customerEmail: email,
+          shippingAddress: address,
+          shippingCity: city,
+          items: {
+            create: lines.map((l) => ({ productId: l.p.id, quantity: l.q, precioUnitario: l.p.price })),
+          },
+        },
+      });
     });
 
-    const order = await prisma.order.create({
-      data: {
-        userId: user.id, total, status: "PENDING",
-        items: { create: lines.map((l: any) => ({ productId: l.p.id, quantity: l.q, precioUnitario: l.p.price })) },
-      },
-    });
-
-    const base = process.env.NEXT_PUBLIC_BASE_URL!;
-    const pref = await new Preference(mp).create({
-      body: {
-        items: lines.map((l: any) => ({ id: l.p.id, title: l.p.name, quantity: l.q, unit_price: l.p.price, currency_id: "COP" })),
-        payer: { name: customer.name, email: customer.email },
-        external_reference: String(order.id),
-        notification_url: `${base}/api/webhooks/payment`,
-        back_urls: { success: `${base}/tienda?pago=ok`, failure: `${base}/checkout`, pending: `${base}/tienda?pago=pendiente` },
-        auto_return: "approved",
-      },
-    });
-
-    return NextResponse.json({ orderId: order.id, paymentUrl: pref.init_point });
+    return NextResponse.json({ orderId: order.id, paymentUrl: `/pago/${order.id}` });
   } catch (e: any) {
+    if (e instanceof HttpError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
-    return NextResponse.json({ error: e.message ?? "Error interno" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

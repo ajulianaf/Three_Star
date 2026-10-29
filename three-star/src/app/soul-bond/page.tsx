@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Personajes from "./personajes";
 
 type IconProps = { className?: string };
 
@@ -52,9 +54,22 @@ const RED = "#FF3B4E"; // color del neón (más brillante)
 const GLOW =
   "drop-shadow(0 0 1px #ff2942) drop-shadow(0 0 4px #FF2E45) drop-shadow(0 0 10px #E11D2E) drop-shadow(0 0 22px rgba(225,29,72,0.9)) drop-shadow(0 0 10px rgba(225,29,72,0.6))";
 
-export default function SoulBond() {
+function SoulBond() {
   const [active, setActive] = useState<TabId>("animacion");
   const index = tabs.findIndex((t) => t.id === active);
+
+  // Abre la pestaña indicada en la dirección: /soul-bond?tab=comic
+  const tabParam = useSearchParams().get("tab");
+  useEffect(() => {
+    const found = tabs.find((t) => t.id === tabParam);
+    if (found) setActive(found.id);
+  }, [tabParam]);
+
+  // Al cambiar de pestaña con el menú, actualiza la dirección sin recargar
+  const selectTab = (id: TabId) => {
+    setActive(id);
+    window.history.replaceState(null, "", `?tab=${id}`);
+  };
 
   // Posición del medio círculo según la pestaña activa
   const arcTop = PAD_TOP + index * ROW + ROW / 2 - RADIUS;
@@ -66,7 +81,7 @@ export default function SoulBond() {
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => setActive(id)}
+            onClick={() => selectTab(id)}
             className={`flex shrink-0 items-center gap-2 rounded-full border-2 px-4 py-1 text-base transition duration-300 ease-out ${
               active === id
                 ? "border-[#FF3B4E] text-[#FF3B4E] shadow-[0_0_12px_rgba(255,59,78,0.8)]"
@@ -133,7 +148,7 @@ export default function SoulBond() {
               return (
                 <li key={id}>
                   <button
-                    onClick={() => setActive(id)}
+                    onClick={() => selectTab(id)}
                     className="flex w-full items-center text-left"
                     style={{ height: `${ROW}em`, paddingLeft: `${LINE_X + 0.6}em` }}
                   >
@@ -164,11 +179,13 @@ export default function SoulBond() {
           </ul>
         </nav>
 
-        {/* Contenido */}
+        {/* Contenido (la pestaña Personajes usa más ancho para que quepan las tres tarjetas) */}
         <section className="min-w-0 flex-1 px-6 py-10 md:px-10">
           <div
             key={active}
-            className="mx-auto max-w-4xl animate-tab-in space-y-6 motion-reduce:animate-none"
+            className={`mx-auto animate-tab-in space-y-6 motion-reduce:animate-none ${
+              active === "personajes" ? "max-w-7xl" : "max-w-4xl"
+            }`}
           >
             {active === "animacion" && (
               <>
@@ -190,9 +207,7 @@ export default function SoulBond() {
               </>
             )}
 
-            {active === "personajes" && (
-              <p className="text-white/70">Próximamente: personajes de Soul Bond.</p>
-            )}
+            {active === "personajes" && <Personajes />}
 
             {active === "comic" && (
               <p className="text-white/70">Próximamente: cómic de Soul Bond.</p>
@@ -201,5 +216,14 @@ export default function SoulBond() {
         </section>
       </div>
     </div>
+  );
+}
+
+/* useSearchParams exige un Suspense; esta es la página que exporta Next.js */
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <SoulBond />
+    </Suspense>
   );
 }

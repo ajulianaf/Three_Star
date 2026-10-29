@@ -14,11 +14,12 @@ export const metadata = { title: "Three Star", description: "Producciones y merc
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
-      <body className={`${itim.variable} ${gothic.variable} font-sans`}>
+      {/* flex + min-h-screen + flex-col: el body ocupa toda la pantalla y el <main> se estira, así el footer queda siempre abajo */}
+      <body className={`${itim.variable} ${gothic.variable} flex min-h-screen flex-col font-sans`}>
         <CartProvider>
           <SplashScreen />
           <Header />
-          <main>{children}</main>
+          <main className="flex-1">{children}</main>
           <Footer />
         </CartProvider>
       </body>
