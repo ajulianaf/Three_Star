@@ -14,6 +14,7 @@ export default async function Pago({ params }: { params: { id: string } }) {
 
   const products = await prisma.product.findMany({ where: { id: { in: order.items.map((i) => i.productId) } } });
   const lines = order.items.map((i) => ({
+    id: i.productId,
     name: products.find((p) => p.id === i.productId)?.name ?? "Producto",
     quantity: i.quantity,
     subtotal: i.precioUnitario * i.quantity,

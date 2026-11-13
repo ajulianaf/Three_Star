@@ -137,7 +137,7 @@ export default function CharacterCarousel() {
 
   return (
     <section
-      className="relative h-[clamp(320px,46vw,600px)] w-full overflow-hidden bg-[#8C7CB6]"
+      className="relative h-[clamp(210px,46vw,600px)] w-full overflow-hidden bg-[#8C7CB6]"
     >
       {CHARACTERS.map((c, i) => {
         let d = (i - index + n) % n;
@@ -162,7 +162,7 @@ export default function CharacterCarousel() {
               <Link
                 href={c.href}
                 onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-[8%] right-[7%] z-10 rounded-2xl bg-[#FBC616] px-[4%] py-[1.2%] text-[clamp(14px,1.5vw,20px)] text-[#232350] transition hover:brightness-110"
+                className="absolute bottom-[8%] right-[5%] z-10 rounded-xl bg-[#FBC616] px-3 py-1.5 text-sm text-[#232350] transition hover:brightness-110 sm:right-[7%] sm:rounded-2xl sm:px-[4%] sm:py-[1.2%] sm:text-[clamp(14px,1.5vw,20px)]"
               >
                 {c.button}
               </Link>
@@ -173,9 +173,9 @@ export default function CharacterCarousel() {
 
       {/* Flechas: solo en pantallas pequeñas (responsive) */}
       <button aria-label="Anterior" onClick={() => go(-1)}
-        className="absolute left-3 top-1/2 z-40 h-11 w-11 md:hidden -translate-y-1/2 rounded-full bg-[#FBC616] text-xl text-[#232350]">&lt;</button>
+        className="absolute left-3 top-1/2 z-40 h-10 w-10 md:hidden -translate-y-1/2 rounded-full bg-[#FBC616] text-xl text-[#232350]">&lt;</button>
       <button aria-label="Siguiente" onClick={() => go(1)}
-        className="absolute right-3 top-1/2 z-40 h-11 w-11 md:hidden -translate-y-1/2 rounded-full bg-[#FBC616] text-xl text-[#232350]">&gt;</button>
+        className="absolute right-3 top-1/2 z-40 h-10 w-10 md:hidden -translate-y-1/2 rounded-full bg-[#FBC616] text-xl text-[#232350]">&gt;</button>
 
       {/* Sapos: todos montados (así se precargan) pero SOLO se ve un cuadro del sapo actual.
           Los cambios son instantáneos: nunca hay dos imágenes superpuestas. */}

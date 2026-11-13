@@ -1,8 +1,8 @@
 import Image from "next/image";
 
 /* Imágenes: guárdalas en /public/nosotros/ (o cambia las rutas aquí) */
-const SAPOS = "/nosotros/sapos.png"; // los tres sapos
-const LOGO = "/nosotros/logo-three-star.png"; // logo "Three Star"
+//const SAPOS = "/nosotros/sapos.png"; // los tres sapos
+const LOGO = "/logo.png"; // logo "Three Star"
 
 const INTRO =
   "Three Star es un estudio de videojuegos formado por tres amigos, desarrolladores e ingenieros multimedia, unidos por la pasión de crear mundos jugables. Nuestro nombre y nuestro logo nacen de algo muy nuestro: tres sapos, cada uno representando a un integrante del equipo con su color favorito.";
@@ -30,8 +30,8 @@ export default function Nosotros() {
     <div className="mx-auto max-w-3xl space-y-12 p-6 text-white">
       {/* ---------- Presentación ---------- */}
       <header className="flex flex-col items-center gap-6">
-        <Image src={SAPOS} alt="Los tres sapos de Three Star" width={420} height={190} priority className="h-auto w-64 sm:w-80" />
-        <Image src={LOGO} alt="Three Star" width={460} height={150} priority className="h-auto w-72 sm:w-96" />
+        {/*<Image src={SAPOS} alt="Los tres sapos de Three Star" width={420} height={190} priority className="h-auto w-64 sm:w-80" />*/}
+        <Image src={LOGO} alt="Three Star" width={490} height={180} priority className="h-auto w-72 sm:w-96" />
         <p className="text-justify text-sm leading-relaxed sm:text-base">{INTRO}</p>
       </header>
 

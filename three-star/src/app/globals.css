@@ -6,3 +6,28 @@ body {
   @apply bg-canvas min-h-screen;
   font-family: var(--font-itim), system-ui, sans-serif;
 }
+
+/* Autocompletado del navegador (Chrome/Edge/Safari): sin esto pinta los campos de azul claro con texto negro.
+   Aquí se fuerza el mismo aspecto que los demás campos: fondo "deep" y texto blanco. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px theme("colors.deep") inset;
+  box-shadow: 0 0 0 1000px theme("colors.deep") inset;
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  border-radius: 0.5rem;
+  transition: background-color 9999s ease-in-out 0s; /* evita el destello del color original */
+}
+
+/* Autocompletado de Chrome: conserva el fondo oscuro y el texto blanco del campo */
+.checkout-input:-webkit-autofill,
+.checkout-input:-webkit-autofill:hover,
+.checkout-input:-webkit-autofill:focus,
+.checkout-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+

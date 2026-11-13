@@ -19,8 +19,9 @@ export default function Home() {
         {/* Tamaño: ajústalo cambiando 4.5vw (más = más grande). Fórmula: 135 ÷ ancho del frame de Figma × 100 */}
         <h2 className="px-6 text-center text-[clamp(28px,4.5vw,86px)] leading-none text-white">Productos Destacados</h2>
 
-        <div className="mx-auto max-w-4xl p-6">
-          <div className="grid gap-5 sm:grid-cols-3">
+        <div className="mx-auto max-w-4xl p-4 sm:p-6">
+          {/* celular: 1 columna angosta y centrada; desde sm: 3 columnas */}
+          <div className="mx-auto grid max-w-[280px] gap-5 sm:max-w-none sm:grid-cols-3">
             {PRODUCTS.map((p) => (
               <div key={p.name} className="rounded-xl bg-card p-3 text-center text-white">
                 <ProductCarousel images={p.images} alt={p.name} />

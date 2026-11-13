@@ -43,9 +43,17 @@ const CHARACTERS: Character[] = [
 
 /* ============ ESTILOS (todas las clases llevan el prefijo "sb-" para no chocar con el resto del sitio) ============ */
 const CSS = `
-/* Las tres tarjetas siempre en una misma fila */
-.sb-wrap { padding: 2rem 1rem; }
-.sb-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; justify-items: center; }
+/* Responsive: 1 columna en celular y tablet, 2 en pantallas medianas (la tercera centrada) y 3 en pantallas grandes */
+.sb-wrap { padding: 1.5rem .5rem; }
+.sb-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; justify-items: center; }
+@media (min-width: 900px) {
+  .sb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sb-grid > .sb-card:last-child:nth-child(odd) { grid-column: 1 / -1; width: calc(50% - .75rem); }
+}
+@media (min-width: 1200px) {
+  .sb-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sb-grid > .sb-card:last-child:nth-child(odd) { grid-column: auto; width: 100%; }
+}
 .sb-grid *, .sb-grid *::before, .sb-grid *::after { box-sizing: border-box; }
 
 .sb-card { --c: #fff; --rgb: 255,255,255; width: 100%; max-width: 420px; height: 520px; perspective: 1200px; }

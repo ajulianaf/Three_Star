@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       {/* flex + min-h-screen + flex-col: el body ocupa toda la pantalla y el <main> se estira, así el footer queda siempre abajo */}
-      <body className={`${itim.variable} ${gothic.variable} flex min-h-screen flex-col font-sans`}>
+      <body className={`${itim.variable} ${gothic.variable} flex min-h-screen flex-col overflow-x-hidden font-sans`}>
         <CartProvider>
           <SplashScreen />
           <Header />

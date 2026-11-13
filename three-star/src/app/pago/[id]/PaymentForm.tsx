@@ -68,8 +68,8 @@ export default function PaymentForm({ orderId, total, paid, lines }: { orderId: 
   // ---------- Pago aprobado ----------
   if (status === "ok") {
     return (
-      <div className="mx-auto max-w-md p-6">
-        <div className="rounded-2xl bg-card p-8 text-center text-white">
+      <div className="mx-auto max-w-md p-4 sm:p-6">
+        <div className="rounded-2xl bg-card p-5 text-center sm:p-8 text-white">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-lime text-3xl font-black text-black">✓</div>
           <h1 className="text-2xl font-black">¡Pago aprobado!</h1>
           <p className="mt-2 opacity-80">Pedido #{orderId} · {cop(total)}</p>
@@ -90,8 +90,8 @@ export default function PaymentForm({ orderId, total, paid, lines }: { orderId: 
   // ---------- Formulario de pago ----------
   const busy = status === "processing";
   return (
-    <div className="mx-auto grid max-w-5xl gap-6 p-6 md:grid-cols-2">
-      <section className="rounded-2xl bg-card p-6 text-white">
+    <div className="mx-auto grid max-w-5xl gap-6 p-4 sm:p-6 md:grid-cols-2">
+      <section className="rounded-2xl bg-card p-4 text-white sm:p-6">
         <h2 className="mb-4 text-xl font-black">Pedido #{orderId}</h2>
         {lines.map((l, i) => (
           <div key={i} className="flex justify-between gap-3 border-b border-white/10 py-2">
@@ -102,7 +102,7 @@ export default function PaymentForm({ orderId, total, paid, lines }: { orderId: 
         <p className="mt-4 text-right text-2xl font-black text-star">Total: {cop(total)}</p>
       </section>
 
-      <form onSubmit={pay} className="space-y-3 rounded-2xl bg-card p-6">
+      <form onSubmit={pay} className="space-y-3 rounded-2xl bg-card p-4 sm:p-6">
         <h2 className="text-xl font-black text-white">Pago con tarjeta</h2>
 
         <p className="rounded-lg bg-deep/70 p-3 text-xs text-white/80">

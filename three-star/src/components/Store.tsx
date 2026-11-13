@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon as Iconify } from "@iconify/react";
+import { ProductIcon, iconOf, type IconKey } from "@/components/ProductIcon";   // iconos compartidos con checkout y pago
 import { PRODUCTS, cop } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 
@@ -12,31 +13,9 @@ import { useCart } from "@/context/CartContext";
    Si un producto trae su propia lista "photos" en lib/products.ts, se usa esa en vez de estas. */
 const FOTO_EXT = "png"; // cambia a "png" o "webp" si tus fotos son de otro tipo
 
-type IconKey = "tote" | "bitacora" | "cofre" | "camiseta" | "vela" | "taza" | "pin" | "llavero" | "osito";
-
 const CARRUSEL: IconKey[] = ["tote", "bitacora", "cofre", "camiseta", "pin", "osito"]; // productos con 2 fotos
 
-// Palabras del nombre (o del id) del producto que lo vinculan con cada icono
-const MATCH: [IconKey, string[]][] = [
-  ["tote", ["tote", "bolsa"]],
-  ["bitacora", ["bitacora", "libreta", "cuaderno"]],
-  ["cofre", ["cofre"]],
-  ["camiseta", ["camiseta", "camisa", "shirt"]],
-  ["vela", ["vela"]],
-  ["taza", ["taza", "tazon", "mug", "pocillo", "cup", "vaso"]],
-  ["pin", ["pin", "insignia", "medalla", "boton"]],
-  ["llavero", ["llavero"]],
-  ["osito", ["osito", "peluche", "oso"]],
-];
-
-const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
 type Product = (typeof PRODUCTS)[number] & { photos?: string[] };
-
-function iconOf(p: Product): IconKey | null {
-  const s = norm(`${p.id} ${p.name}`);
-  return MATCH.find(([, words]) => words.some((w) => s.includes(w)))?.[0] ?? null;
-}
 
 function photosOf(p: Product): string[] {
   if (p.photos?.length) return p.photos;
@@ -45,38 +24,6 @@ function photosOf(p: Product): string[] {
   return CARRUSEL.includes(k)
     ? [`/tienda/${k}-1.${FOTO_EXT}`, `/tienda/${k}-2.${FOTO_EXT}`]
     : [`/tienda/${k}.${FOTO_EXT}`];
-}
-
-/* ============ ICONOS (librería Iconify) ============
-   Iconify reúne +150 colecciones de iconos. Cada nombre tiene el formato "colección:icono".
-   Para cambiar uno: entra a https://icon-sets.iconify.design/ , busca el objeto (ej. "candle"),
-   elige el estilo que te guste, y copia el nombre que aparece arriba (ej. "solar:bag-linear"). */
-const ICONS: Record<IconKey, string> = {
-  tote: "bi:bag",
-  bitacora: "ep:notebook",
-  cofre: "proicons:treasure-chest",
-  camiseta: "ph:t-shirt-light",
-  vela: "energy-icons:candle-48",
-  taza: "bi:cup",
-  pin: "cil:badge",
-  llavero: "iconoven:key-chain-sharp",
-  osito: "arcticons:emoji-teddy-bear",
-};
-
-const EMOJI: Record<IconKey, string> = {
-  tote: "👜", bitacora: "📓", cofre: "🧰", camiseta: "👕", vela: "🕯️",
-  taza: "☕", pin: "🏅", llavero: "🔑", osito: "🧸",
-};
-
-function ProductIcon({ k, className = "" }: { k: IconKey; className?: string }) {
-  return (
-    <Iconify
-      icon={ICONS[k]}
-      className={className}
-      aria-hidden
-      fallback={<span className="text-4xl">{EMOJI[k]}</span>}
-    />
-  );
 }
 
 /* ============ FOTOS / CARRUSEL ============ */

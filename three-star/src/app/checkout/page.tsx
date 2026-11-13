@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Icon } from "@iconify/react";
+import { ProductIcon, iconOf } from "@/components/ProductIcon"; // mismos iconos de la tienda
 import { PRODUCTS, cop } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 
@@ -13,11 +14,15 @@ export default function Checkout() {
   const rows = lines.map((l) => ({ ...l, p: PRODUCTS.find((p) => p.id === l.id)! }));
   const total = rows.reduce((s, r) => s + r.p.price * r.quantity, 0);
   // Campo con etiqueta flotante: la etiqueta se achica y sube a la esquina al enfocar o escribir
-  const input = "peer h-[60px] w-full rounded-lg bg-deep px-4 pt-5 text-white outline-none focus:ring-2 focus:ring-star";
+  // El estilo del autocompletado de Chrome va aquí mismo (no hace falta tocar globals.css)
+  const input =
+    "peer h-[60px] w-full rounded-lg bg-deep px-4 pt-5 text-white outline-none [color-scheme:dark] focus:ring-2 focus:ring-star " +
+    "[&:-webkit-autofill]:[-webkit-text-fill-color:#fff] [&:-webkit-autofill]:[transition:background-color_600000s_0s]";
   const label =
     "pointer-events-none absolute left-4 top-2 translate-y-0 text-xs text-white/60 transition-all duration-200 " +
     "peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-white/50 " +
     "peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-star";
+  const autoComplete = { name: "name", email: "email", address: "street-address", city: "address-level2" };
   const labels = { name: "Nombre completo", email: "Correo", address: "Dirección", city: "Ciudad" };
   const stepBtn = "flex h-7 w-7 items-center justify-center rounded-full bg-deep text-white transition hover:brightness-125 disabled:opacity-40 disabled:hover:brightness-100";
 
@@ -39,16 +44,19 @@ export default function Checkout() {
   }
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-6 p-6 md:grid-cols-2">
-      <section className="rounded-2xl bg-card p-6 text-white">
+    <div className="mx-auto grid w-full max-w-5xl grid-cols-[minmax(0,1fr)] gap-6 p-4 sm:p-6 md:grid-cols-2">
+      <section className="min-w-0 rounded-2xl bg-card p-4 text-white sm:p-6">
         <h2 className="mb-4 text-xl font-black">Resumen de compra</h2>
         {rows.length === 0 && <p className="opacity-70">Tu carrito está vacío.</p>}
         {rows.map((r) => (
-          <div key={r.id} className="flex items-center gap-3 border-b border-white/10 py-3">
-            <span className="min-w-0 flex-1 truncate">{r.p.image} {r.p.name}</span>
+          <div key={r.id} className="flex items-center gap-2 border-b border-white/10 py-3 sm:gap-3">
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              {iconOf(r.p) ? <ProductIcon k={iconOf(r.p)!} className="h-6 w-6 shrink-0" /> : <span className="shrink-0">{r.p.image}</span>}
+              <span className="truncate">{r.p.name}</span>
+            </span>
 
             {/* Cantidad: − 2 + (mínimo 1, máximo el stock; para quitar el producto usa la ✕) */}
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <button aria-label="Quitar uno" disabled={r.quantity <= 1} onClick={() => add(r.id, -1)} className={stepBtn}>
                 <Icon icon="lucide:minus" width={16} height={16} />
               </button>
@@ -58,8 +66,8 @@ export default function Checkout() {
               </button>
             </div>
 
-            <span className="w-24 text-right">{cop(r.p.price * r.quantity)}</span>
-            <button aria-label={`Quitar ${r.p.name}`} onClick={() => remove(r.id)} className="flex h-6 w-6 items-center justify-center text-blood">
+            <span className="w-[4.5rem] shrink-0 text-right text-sm sm:w-24 sm:text-base">{cop(r.p.price * r.quantity)}</span>
+            <button aria-label={`Quitar ${r.p.name}`} onClick={() => remove(r.id)} className="flex h-6 w-6 shrink-0 items-center justify-center text-blood">
               <Icon icon="lucide:x" width={16} height={16} />
             </button>
           </div>
@@ -67,12 +75,12 @@ export default function Checkout() {
         <p className="mt-4 text-right text-2xl font-black text-star">Total: {cop(total)}</p>
       </section>
 
-      <form onSubmit={pay} className="space-y-3 rounded-2xl bg-card p-6">
+      <form onSubmit={pay} className="min-w-0 space-y-3 rounded-2xl bg-card p-4 sm:p-6">
         <h2 className="text-xl font-black text-white">Datos de envío</h2>
         {(["name", "email", "address", "city"] as const).map((k) => (
           <div key={k} className="relative">
             {/* placeholder=" " (un espacio) es lo que permite saber si el campo está vacío */}
-            <input id={`f-${k}`} required type={k === "email" ? "email" : "text"} className={input}
+            <input id={`f-${k}`} name={k} autoComplete={autoComplete[k]} required type={k === "email" ? "email" : "text"} className={input}
               placeholder=" " value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
             <label htmlFor={`f-${k}`} className={label}>{labels[k]}</label>
           </div>
