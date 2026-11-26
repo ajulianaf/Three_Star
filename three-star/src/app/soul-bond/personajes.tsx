@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 /* ============ TIPOS ============ */
 type ModelType = "nico" | "leo" | "evangeline";
@@ -18,6 +21,7 @@ interface Character {
   role: string;
   bio: string;
   twine?: string; // solo Evangeline: enlace a su historia en Twine
+  glb?: string; // ruta del modelo 3D en /public (opcional). Si falta o falla, se usa el modelo de prueba
 }
 
 interface HoloMaterials {
@@ -29,13 +33,13 @@ interface HoloMaterials {
 /* ============ DATOS DE LOS PERSONAJES ============
    Edita aquí nombre, color, resumen y estadísticas. "model" elige el modelo 3D procedural. */
 const CHARACTERS: Character[] = [
-  { id: "nico", name: "Nico", color: "#FF3366", rgb: "255,51,102", model: "nico",
+  { id: "nico", name: "Nico", color: "#FF3366", rgb: "255,51,102", model: "nico", glb: "/modelos/Nico.glb",
     role: "El buscador",
     bio: "Nico, un joven campesino de la Italia medieval, emprende la búsqueda de su hermano Leo tras su misteriosa desaparición. Pero en las sombras descubre un antiguo **Linaje** que los une a una **venganza** olvidada, una que podría condenarlos a no encontrarse jamás." },
-  { id: "leo", name: "Leo", color: "#00FF88", rgb: "0,255,136", model: "leo",
+  { id: "leo", name: "Leo", color: "#00FF88", rgb: "0,255,136", model: "leo", glb: "/modelos/Leo.glb",
     role: "El desaparecido",
     bio: "Leo, el hermano menor de Nico, desaparece sin dejar rastro, arrastrado hacia las sombras por una fuerza que desconoce. Sin saberlo, su sangre guarda el vínculo con un antiguo **Linaje** y un destino marcado por una **venganza** que nunca le perteneció." },
-  { id: "evangeline", name: "Evangeline", color: "#A855F7", rgb: "168,85,247", model: "evangeline",
+  { id: "evangeline", name: "Evangeline", color: "#A855F7", rgb: "168,85,247", model: "evangeline", glb: "/modelos/Evangeline.glb",
     role: "La desterrada",
     bio: "Evangeline, una antigua guardiana desterrada al Infierno, aguarda entre las sombras desde hace siglos. El **Linaje** es la llave de su poder y el camino para consumar una **venganza** que aún clama por sangre.",
     twine: "/twine/evangeline.html" },
@@ -207,7 +211,7 @@ function part(geo: THREE.BufferGeometry, mats: HoloMaterials, pos: Vec3 = [0, 0,
   return g;
 }
 
-/* Modelo low-poly procedural (sustitúyelo por un .gltf si lo tienes) */
+/* Modelo low-poly procedural (se muestra mientras carga el .glb) */
 function buildModel(type: ModelType, mats: HoloMaterials): THREE.Group {
   const m = new THREE.Group();
   m.add(part(new THREE.IcosahedronGeometry(0.55, 0), mats, [0, 1.55, 0])); // cabeza
@@ -243,6 +247,13 @@ function buildModel(type: ModelType, mats: HoloMaterials): THREE.Group {
   return m;
 }
 
+/* ---- Cómo se ve tu modelo 3D (.glb) ---- */
+const HOLOGRAFICO = false;  // false: conserva los colores y texturas originales del modelo. true: efecto holograma (translúcido + neón)
+const ALTURA_MODELO = 3.1;  // alto del modelo en la escena (el modelo de prueba mide unos 3.15)
+const PIES_Y = -1.05;       // altura de los pies sobre la peana (el centro de la escena es y = 0.5)
+const OCULTAR_CONTORNO = true; // true: oculta el contorno negro (material "Contornos"). false: lo muestra
+const REPRODUCIR_ANIMACION = true; // si un modelo se ve mal por su animación, ponlo en false
+
 class Hologram {
   private host: HTMLElement;
   private scene = new THREE.Scene();
@@ -254,6 +265,10 @@ class Hologram {
   private raf = 0;
   private last = 0;
   private loop: (now: number) => void;
+  private destroyed = false;
+  private mixer?: THREE.AnimationMixer; // animaciones del modelo, si trae
+  private note?: HTMLDivElement; // aviso "Cargando modelo…" / error
+  private id: string;
 
   // --- interacción ---
   private dragging = false;
@@ -265,6 +280,7 @@ class Hologram {
 
   constructor(host: HTMLElement, c: Character) {
     this.host = host;
+    this.id = c.name;
     const accent = new THREE.Color(c.color);
 
     // Cámara y renderizador con fondo transparente (se ve la tarjeta detrás)
@@ -273,6 +289,8 @@ class Hologram {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0);
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.NoToneMapping; // sin tone mapping: los colores salen tal cual están en la textura
     host.appendChild(this.renderer.domElement);
 
     // Materiales: cuerpo translúcido, rim light fresnel y aristas de neón
@@ -293,17 +311,37 @@ class Hologram {
       line: new THREE.LineBasicMaterial({ color: accent, transparent: true, opacity: 0.55 }),
     };
 
-    // Luces: ambiente de color + luz blanca frontal + contraluz neón
-    this.scene.add(new THREE.AmbientLight(accent, 0.6));
-    const key = new THREE.PointLight(0xffffff, 0.8);
-    key.position.set(2, 3, 4);
-    this.scene.add(key);
-    const rimLight = new THREE.PointLight(accent, 1.2);
-    rimLight.position.set(-3, 1, -2);
-    this.scene.add(rimLight);
+    // Luces. En modo holograma: ambiente de color + frontal + contraluz neón.
+    // En modo colores originales: luz blanca/neutra para no teñir el modelo, más una luz hemisférica.
+    if (HOLOGRAFICO) {
+      this.scene.add(new THREE.AmbientLight(accent, 0.6));
+    } else {
+      // Luz suave: antes había demasiada y los colores se "quemaban" hasta quedar blancos
+      this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+      this.scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 0.6));
+      const fill = new THREE.DirectionalLight(0xffffff, 1.0);
+      fill.position.set(2, 3, 4);
+      this.scene.add(fill);
+    }
+    if (HOLOGRAFICO) {
+      const key = new THREE.PointLight(0xffffff, 0.8);
+      key.position.set(2, 3, 4);
+      this.scene.add(key);
+      const rimLight = new THREE.PointLight(accent, 1.2);
+      rimLight.position.set(-3, 1, -2);
+      this.scene.add(rimLight);
+    }
 
     this.model = buildModel(c.model, this.mats);
     this.scene.add(this.model);
+    if (c.glb) {
+      // Aviso pequeño sobre el holograma: muestra el progreso de carga o si falló
+      this.note = document.createElement("div");
+      this.note.style.cssText = `position:absolute;left:12px;top:46px;z-index:3;pointer-events:none;font-size:11px;letter-spacing:.08em;color:${c.color}`;
+      this.note.textContent = "Cargando modelo…";
+      host.appendChild(this.note);
+      this.loadGlb(c.glb); // mientras carga se ve el modelo de prueba
+    }
 
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(host);
@@ -372,8 +410,126 @@ class Hologram {
         orbit.rotation.y -= dt * 1.6;
         orbit.position.y = Math.sin(now / 500) * 0.12;
       }
+      this.mixer?.update(dt);
       this.renderer.render(this.scene, this.camera);
     };
+  }
+
+  /* Carga un .glb / .gltf y reemplaza el modelo de prueba */
+  private async loadGlb(url: string) {
+    // Soporta modelos comprimidos con Draco, Meshopt o texturas KTX2
+    const draco = new DRACOLoader();
+    draco.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+    const ktx2 = new KTX2Loader()
+      .setTranscoderPath(`https://unpkg.com/three@0.${THREE.REVISION}.0/examples/jsm/libs/basis/`)
+      .detectSupport(this.renderer);
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(draco);
+    loader.setKTX2Loader(ktx2);
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    try {
+      const gltf = await loader.loadAsync(url, (e) => {
+        if (this.note && e.total) this.note.textContent = `Cargando modelo… ${Math.round((e.loaded / e.total) * 100)}%`;
+      });
+      if (this.destroyed) return; // se cerró el holograma mientras cargaba
+      const obj = gltf.scene;
+
+      // Evita que el modelo desaparezca por un mal cálculo de la caja de recorte (típico en mallas con esqueleto)
+      obj.traverse((o) => { o.frustumCulled = false; });
+      obj.updateMatrixWorld(true);
+
+      // 1) Escalar a ALTURA_MODELO, centrar en X/Z y apoyar los pies en PIES_Y
+      const box = new THREE.Box3().setFromObject(obj, true);
+      const size = box.getSize(new THREE.Vector3());
+      const alto = size.y > 1e-6 ? size.y : Math.max(size.x, size.z, 1e-6); // por si el modelo es plano
+      obj.scale.multiplyScalar(ALTURA_MODELO / alto);
+      obj.updateMatrixWorld(true);
+      box.setFromObject(obj, true);
+      const center = box.getCenter(new THREE.Vector3());
+      obj.position.set(-center.x, PIES_Y - box.min.y, -center.z);
+
+      // 2) Materiales
+      if (HOLOGRAFICO) {
+        // Efecto holograma: material translúcido + rim light + aristas de neón
+        this.mats.body.flatShading = false; // el modelo real es suave, no facetado
+        this.mats.body.needsUpdate = true;
+        obj.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.material = this.mats.body;
+          if (!(mesh as THREE.SkinnedMesh).isSkinnedMesh) { // las mallas con esqueleto se dejan sin cáscara
+            const shell = new THREE.Mesh(mesh.geometry, this.mats.rim);
+            shell.scale.setScalar(1.03);
+            mesh.add(shell);
+            mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 30), this.mats.line));
+          }
+        });
+      } else {
+        // Colores originales: se conservan materiales y texturas; solo se asegura que se vean bien
+        obj.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          const fixed = list.map((m) => {
+            let mm = m as THREE.MeshStandardMaterial;
+            // Diagnóstico: mira en la consola qué trae cada material
+            console.log(`[${this.id}] material "${mm.name}"`, {
+              type: mm.type, color: mm.color?.getHexString(), map: !!mm.map,
+              vertexColors: mm.vertexColors, emissive: mm.emissive?.getHexString(),
+              emissiveIntensity: mm.emissiveIntensity, emissiveMap: !!mm.emissiveMap,
+              attrColor: !!mesh.geometry.getAttribute("color"),
+            });
+            // Material "sin luz" (KHR_materials_unlit): se pasa a uno normal para que tenga sombreado
+            if ((mm as unknown as THREE.Material).type === "MeshBasicMaterial") {
+              const basic = m as THREE.MeshBasicMaterial;
+              mm = new THREE.MeshStandardMaterial({
+                color: basic.color, map: basic.map, transparent: basic.transparent,
+                opacity: basic.opacity, alphaTest: basic.alphaTest, roughness: 0.8, metalness: 0,
+              });
+              mm.name = basic.name;
+            }
+            // Un emisivo blanco deja el modelo plano y blanco: se apaga
+            if (mm.emissive) { mm.emissive.set(0x000000); mm.emissiveIntensity = 0; mm.emissiveMap = null; }
+            if (mm.map) mm.map.colorSpace = THREE.SRGBColorSpace;
+            mm.metalness = Math.min(mm.metalness ?? 0, 0.3); // un metal sin entorno se ve negro/plano
+            // OJO: no se fuerza DoubleSide; el contorno (Solidify con normales invertidas) necesita FrontSide
+            // El contorno negro (Solidify) puede verse como manchas negras en brazos u orejas: se oculta
+            // Solo se oculta si es de contorno Y casi negro, para no esconder piezas de color (p. ej. las botas)
+            const c = mm.color;
+            const oscuro = !!c && c.r < 0.08 && c.g < 0.08 && c.b < 0.08;
+            if (OCULTAR_CONTORNO && /contorn/i.test(mm.name) && oscuro) mm.visible = false;
+            mm.needsUpdate = true;
+            return mm;
+          });
+          mesh.material = Array.isArray(mesh.material) ? fixed : fixed[0];
+        });
+      }
+
+      // 3) Si el modelo trae animación, reproduce la primera
+      if (REPRODUCIR_ANIMACION && gltf.animations.length) {
+        this.mixer = new THREE.AnimationMixer(obj);
+        this.mixer.clipAction(gltf.animations[0]).play();
+      }
+
+      // 4) Reemplazar el modelo de prueba (conserva el giro actual) y liberar el anterior
+      const holder = new THREE.Group();
+      holder.rotation.copy(this.model.rotation);
+      holder.add(obj);
+      this.model.traverse((o) => {
+        const geo = (o as THREE.Mesh).geometry;
+        if (geo) geo.dispose();
+      });
+      this.scene.remove(this.model);
+      this.model = holder;
+      this.scene.add(holder);
+      this.note?.remove();
+    } catch (err) {
+      console.warn(`No se pudo cargar ${url} (${this.id}). Se queda el modelo de prueba.`, err);
+      if (this.note) this.note.textContent = "⚠ El modelo no cargó (mira la consola, F12)";
+    } finally {
+      draco.dispose();
+      ktx2.dispose();
+    }
   }
 
   private resize() {
@@ -391,12 +547,18 @@ class Hologram {
   }
 
   destroy() { // libera la GPU al desactivar
+    this.destroyed = true;
+    this.note?.remove();
     this.cleanupPointer();
     cancelAnimationFrame(this.raf);
     this.ro.disconnect();
+    const own = Object.values(this.mats) as THREE.Material[];
     this.scene.traverse((o) => {
-      const geo = (o as THREE.Mesh).geometry;
-      if (geo) geo.dispose();
+      const mesh = o as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      // materiales y texturas originales del .glb (si no se reemplazaron por los del holograma)
+      const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+      mats.forEach((m) => { if (!own.includes(m)) m.dispose(); });
     });
     Object.values(this.mats).forEach((m) => m.dispose());
     this.renderer.dispose();
@@ -491,7 +653,6 @@ function CharacterCard({ c }: { c: Character }) {
           </header>
 
           <p className="sb-bio"><Rich text={c.bio} /></p>
-
 
           <div className="sb-actions">
             <button

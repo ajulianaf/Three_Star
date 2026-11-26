@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Personajes from "./personajes";
+import Comic from "./Comic";
+import SoulBondIntro from "./SoulBondIntro";
 
 type IconProps = { className?: string };
 
@@ -76,6 +78,9 @@ function SoulBond() {
 
   return (
     <div className="bg-[#444] text-white">
+      {/* Animación + sonido al entrar a Soul Bond (se ajusta en SoulBondIntro.tsx) */}
+      <SoulBondIntro />
+
       {/* Tabs en móvil */}
       <div className="flex gap-3 overflow-x-auto px-6 pt-6 md:hidden">
         {tabs.map(({ id, label, icon: Icon }) => (
@@ -179,23 +184,23 @@ function SoulBond() {
           </ul>
         </nav>
 
-        {/* Contenido (la pestaña Personajes usa más ancho para que quepan las tres tarjetas) */}
+        {/* Contenido (Personajes y Cómic usan más ancho) */}
         <section className="min-w-0 flex-1 px-6 py-10 md:px-10">
           <div
             key={active}
             className={`mx-auto animate-tab-in space-y-6 motion-reduce:animate-none ${
-              active === "personajes" ? "max-w-7xl" : "max-w-4xl"
+              active === "personajes" ? "max-w-7xl" : active === "comic" ? "max-w-5xl" : "max-w-4xl"
             }`}
           >
             {active === "animacion" && (
               <>
-                {/* Coloca tu teaser en /public/soul-bond.mp4 */}
+                {/* El video está en /public/videos/soul-bond.mp4. Los controles del navegador incluyen el volumen */}
                 <video
                   controls
-                  poster="/soul-bond-poster.png"
+                  preload="metadata"
                   className="aspect-video w-full bg-black"
                 >
-                  <source src="/soul-bond.mp4" type="video/mp4" />
+                  <source src="/videos/soul-bond.mp4" type="video/mp4" />
                 </video>
 
                 <p className="text-justify text-base leading-relaxed text-white/80 md:text-lg">
@@ -209,9 +214,7 @@ function SoulBond() {
 
             {active === "personajes" && <Personajes />}
 
-            {active === "comic" && (
-              <p className="text-white/70">Próximamente: cómic de Soul Bond.</p>
-            )}
+            {active === "comic" && <Comic />}
           </div>
         </section>
       </div>
