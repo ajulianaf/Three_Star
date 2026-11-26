@@ -82,18 +82,27 @@ const CSS = `
 .cm-single .cm-front::after { background: linear-gradient(to right, rgba(0,0,0,.35), transparent 8%); }
 
 /* ---- Controles ---- */
-.cm-controls { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: .25rem; flex-wrap: wrap; }
+.cm-controls { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: .25rem; flex-wrap: nowrap; }
 .cm-top {
   /* Va en el espacio vacío que deja el padding superior de la sección: no le quita alto al libro */
   display: flex; justify-content: flex-end; align-items: center; gap: .6rem; height: 2.1rem; margin: -2.3rem 0 .2rem;
 }
 .cm-btn {
-  padding: .6rem 1.1rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: .85rem;
+  padding: .6rem 1.1rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: .85rem; white-space: nowrap; flex-shrink: 0;
   color: var(--c); background: transparent; border: 1px solid var(--c); transition: background .2s, box-shadow .2s, opacity .2s;
 }
 .cm-btn:hover:not(:disabled), .cm-btn:focus-visible { background: rgba(var(--rgb), .18); box-shadow: 0 0 16px rgba(var(--rgb), .6); outline: none; }
 .cm-btn:disabled { opacity: .3; cursor: default; }
 .cm-label { min-width: 9rem; text-align: center; font-size: .85rem; color: rgba(255,255,255,.75); }
+
+/* Celular: solo las flechas (círculos), siempre en la misma fila que el número de página */
+@media (max-width: 767px) {
+  /* Fila centrada en la pantalla: flecha - texto - flecha, con las flechas siempre en la misma posición */
+  .cm-controls { width: 100%; max-width: 18rem; margin-left: auto; margin-right: auto; justify-content: space-between; gap: .5rem; }
+  .cm-txt { display: none; }
+  .cm-btn { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; font-size: 1.5rem; line-height: 1; }
+  .cm-label { min-width: 0; flex: 1 1 auto; text-align: center; }
+}
 
 /* ---- Lectura vertical (opcional en celular) ---- */
 .cm-scroll { display: grid; gap: 1rem; max-width: 520px; margin: 0 auto; }
@@ -202,11 +211,11 @@ function Book({ single }: { single: boolean }) {
 
       <div className="cm-controls">
         <button type="button" className="cm-btn" onClick={() => go(-1)} disabled={current === 0} aria-label="Página anterior">
-          ‹ Anterior
+          ‹<span className="cm-txt"> Anterior</span>
         </button>
         <span className="cm-label" aria-live="polite">{label}</span>
         <button type="button" className="cm-btn" onClick={() => go(1)} disabled={current === max} aria-label="Página siguiente">
-          Siguiente ›
+          <span className="cm-txt">Siguiente </span>›
         </button>
       </div>
     </>
