@@ -38,12 +38,7 @@ export default function Footer() {
 
   return (
     <footer className={`${bg} px-4 py-6 text-center text-white`}>
-      <div className="mb-3 flex items-center justify-center gap-4">
-        {/* Cambia los "#" por los enlaces reales de tus redes */}
-        <a href="#" aria-label="YouTube" className="hover:text-blood"><YouTube /></a>
-        <a href="#" aria-label="Instagram" className="hover:text-blood"><Instagram /></a>
-        <a href="#" aria-label="TikTok" className="hover:text-blood"><TikTok /></a>
-      </div>
+      
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo.png" alt="Three Star" className="mx-auto h-8 w-auto brightness-0 invert" />
       <p className="mt-2 text-xs text-white/80">
